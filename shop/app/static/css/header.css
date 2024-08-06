@@ -1,0 +1,19 @@
+header img {
+    display: block;
+    width: 200px;
+    height: 200px;
+    margin: 25px auto;
+}
+
+header h1 {
+    text-align: center;
+    color: var(--tg-theme-text-color);
+}
+
+header span {
+    display: block;
+    width: 300px;
+    margin: 20px auto;
+    text-align: center;
+    color: var(--tg-theme-hint-color);
+}
