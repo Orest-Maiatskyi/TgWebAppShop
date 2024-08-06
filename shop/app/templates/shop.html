@@ -1,0 +1,319 @@
+{% extends './parts/base.html' %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shop.css') }}">
+{% endblock head %}
+
+{% block main %}
+<div id="openCartBtn" onclick="showGoodsCart()">
+    <img src="{{ url_for('static', filename='img/cart.png') }}">
+</div>
+<div id="goodsCart" style="display: none;"></div>
+<div class="pagination">
+    {% if goods.has_prev %}
+    <span>
+        <a class='page-number' href="{{ url_for('shop', page=1) }}"> &lt;&lt; </a>
+    </span>
+    {% else %}
+    <span>
+        <a class='page-number disabled' href="#"> &lt;&lt; </a>
+    </span>
+    {% endif %}
+    {% if goods.has_prev %}
+    <span>
+        <a class='page-number' href="{{ url_for('shop', page=goods.prev_num) }}"> &lt; </a>
+    </span>
+    {% else %}
+    <span>
+        <a class='page-number disabled' href="#"> &lt; </a>
+    </span>
+    {% endif %}
+
+    {% for number in goods.iter_pages(left_edge=0, right_edge=0, left_current=1, right_current=3) %}
+        {% if number %}
+            {% if goods.page != number %}
+            <span>
+                <a class='page-number' href="{{ url_for('shop', page=number) }}">
+                {{ number }}
+                </a>
+            </span>
+            {% else %}
+                <span class='page-number current-page-number'>{{ number }}</span>
+            {% endif %}
+        {% else %}
+            
+        {% endif %}
+    {% endfor %}
+
+    {% if goods.has_next %}
+    <span>
+        <a class='page-number' href="{{ url_for('shop', page=goods.next_num) }}"> &gt; </a>
+    </span>
+    {% else %}
+    <span>
+        <a class='page-number disabled' href="#"> &gt; </a>
+    </span>
+    {% endif %}
+    {% if goods.has_next %}
+    <span>
+        <a class='page-number' href="{{ url_for('shop', page=goods.pages) }}"> &gt;&gt; </a>
+    </span>
+    {% else %}
+    <span>
+        <a class='page-number disabled' href="#"> &gt;&gt; </a>
+    </span>
+    {% endif %}
+</div>
+    <div id="goodsInfo" style="display: none;"></div>
+    <div class="goods-cont">
+        {% for c_goods in goods.items %}
+        <div class="goods">
+            <img src="{{ url_for('static', filename='img/example-goods-img/' + c_goods.banner) }}" onclick="showGoodsInfo('{{c_goods.title}}', '{{c_goods.description}}', '{{c_goods.banner}}', '{{c_goods.price}}')">
+            <span>{{ c_goods.title }}<br>{{ c_goods.price }}$<br>In stock: {{c_goods.in_stock}}</span>
+            <button onclick="goodsCartObj.addGoodsToCart('{{ c_goods.id}}', '{{ c_goods.title}}', '{{ c_goods.price}}', '{{ c_goods.banner}}', '{{c_goods.in_stock}}')">Add To Cart</button>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="pagination">
+        {% if goods.has_prev %}
+        <span>
+            <a class='page-number' href="{{ url_for('shop', page=1) }}"> &lt;&lt; </a>
+        </span>
+        {% else %}
+        <span>
+            <a class='page-number disabled' href="#"> &lt;&lt; </a>
+        </span>
+        {% endif %}
+        {% if goods.has_prev %}
+        <span>
+            <a class='page-number' href="{{ url_for('shop', page=goods.prev_num) }}"> &lt; </a>
+        </span>
+        {% else %}
+        <span>
+            <a class='page-number disabled' href="#"> &lt; </a>
+        </span>
+        {% endif %}
+
+        {% for number in goods.iter_pages(left_edge=0, right_edge=0, left_current=1, right_current=3) %}
+            {% if number %}
+                {% if goods.page != number %}
+                <span>
+                    <a class='page-number' href="{{ url_for('shop', page=number) }}">
+                    {{ number }}
+                    </a>
+                </span>
+                {% else %}
+                    <span class='page-number current-page-number'>{{ number }}</span>
+                {% endif %}
+            {% else %}
+                ...
+            {% endif %}
+        {% endfor %}
+
+        {% if goods.has_next %}
+        <span>
+            <a class='page-number' href="{{ url_for('shop', page=goods.next_num) }}"> &gt; </a>
+        </span>
+        {% else %}
+        <span>
+            <a class='page-number disabled' href="#"> &gt; </a>
+        </span>
+        {% endif %}
+        {% if goods.has_next %}
+        <span>
+            <a class='page-number' href="{{ url_for('shop', page=goods.pages) }}"> &gt;&gt; </a>
+        </span>
+        {% else %}
+        <span>
+            <a class='page-number disabled' href="#"> &gt;&gt; </a>
+        </span>
+        {% endif %}
+    </div>
+{% endblock main %}
+
+{% block scripts %}
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    const bannerUrl = '{{ url_for("static", filename="img/example-goods-img/") }}';
+
+    // Goods cart
+
+    class GoodsCart {
+
+        constructor() {
+            this.storage = localStorage;
+        }
+
+        addGoodsToCart(id, title, price, banner, inStock) {
+            if (this.storage.getItem(id) != null) {
+                let goodsJson = JSON.parse(this.storage.getItem(id));
+                goodsJson['count'] += 1;
+                if (goodsJson['count'] > inStock) goodsJson['count'] -= 1;
+                this.storage.setItem(id, JSON.stringify(goodsJson));
+            } else {
+                let goodsJson = {
+                    'id': id,
+                    'title': title,
+                    'price': price,
+                    'banner': banner,
+                    'count': 1,
+                };
+                this.storage.setItem(id, JSON.stringify(goodsJson));
+            }
+        }
+
+        getAllGoods() {
+            let goodsJson = {};
+            for (const [key, value] of Object.entries({...this.storage})) {
+                goodsJson[key] = JSON.parse(value);
+            }
+            return goodsJson
+        }
+
+        getGoodsById(id) {
+            return JSON.parse(this.storage.getItem(id));
+        }
+
+        removeOneGoodsFromCartById(id) {
+            if (this.storage.getItem(id) != null) {
+                let goodsJson = JSON.parse(this.storage.getItem(id));
+                goodsJson['count'] -= 1;
+                if (goodsJson['count'] != 0) {
+                    this.storage.setItem(id, JSON.stringify(goodsJson));
+                } else {
+                    this.removeAllGoodsFromCartById(id);
+                }
+            }
+        }
+
+        removeAllGoodsFromCartById(id) {
+            this.storage.removeItem(id);
+        }
+
+        clearCart() {
+            this.storage.clear();
+        }
+
+    }
+
+    const goodsCartObj = new GoodsCart();
+
+    const goodsCart = document.getElementById('goodsCart');
+
+    function clearGoodsCart() {
+        goodsCartObj.clearCart();
+        showGoodsCart();
+    }
+
+    function removeOneGoods(id) {
+        goodsCartObj.removeOneGoodsFromCartById(id);
+        showGoodsCart();
+    }
+
+    function removeAllGoods(id) {
+        goodsCartObj.removeAllGoodsFromCartById(id);
+        showGoodsCart();
+    }
+
+    function makeOrder() {
+        let cartGoods = goodsCartObj.getAllGoods();
+
+        tg.sendData(JSON.stringify(cartGoods));
+        tg.close();
+    }
+
+    function showGoodsCart() {
+        goodsCart.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+
+        let totalPrice = 0.0;
+        let tableGoodsHtml = '';
+        for(let key of Object.keys(localStorage)) {
+            let currentGoods = goodsCartObj.getGoodsById(key);
+            tableGoodsHtml += 
+            `<tr>
+                <td>
+                    <img src=${bannerUrl}${currentGoods['banner']} style='width: 60px;'>
+                </td>
+                <td>
+                    <p style="width: 100px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${currentGoods['title']}</p>
+                </td>
+                <td>
+                    <p>${currentGoods['price']}$</p>
+                </td>
+                <td>
+                    <p>x${currentGoods['count']}</p>
+                </td>
+                <td style="width: 60px;">
+                    <button class="" onclick="removeOneGoods(${currentGoods['id']})" style="">-1</button>
+                    <button class="" onclick="removeAllGoods(${currentGoods['id']})" style="">-all</button>
+                </td>
+            </tr>`;
+            totalPrice = (totalPrice * 100 + (currentGoods['price'] * 100 * currentGoods['count'])) / 100;
+        }
+
+        let html = 
+        `
+        <div class="cart-top-cont">
+            <button class="clear" onclick="clearGoodsCart()">Clear Cart</button>
+            <button class="make" onclick="makeOrder()">Make Order</button>
+            <button class="close" onclick="closeGoodsCart()">X</button>
+        </div>
+        <table style="margin-top: 40px;">
+    
+            ${tableGoodsHtml}
+        </table>
+        `;
+
+        if (totalPrice > 0) {
+            html += `
+            <span style="font-weight: 500; padding: 10px;">Total price: ${totalPrice}$</span>
+            <button style="padding: 5px; border-radius: 2px;" onclick="makeOrder()">Make Order</button>
+            `;
+        } else {
+            html += `
+            <span style="font-weight: 500; text-align: center;">Cart is empty :(</span>
+            `;
+        }
+
+        goodsCart.innerHTML = html;
+    }
+
+    function closeGoodsCart() {
+        goodsCart.style.display = 'none';
+        document.body.style.overflow = 'visible';
+    }
+
+    function addGoodsToCart() {
+
+    }
+
+    // Goods info popup
+
+    const goodsInfo = document.getElementById('goodsInfo');
+
+    function showGoodsInfo(title, description, banner, price) {
+        goodsInfo.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+
+        let html = 
+        `
+        <button class="close-button" onclick="closeGoodsInfo()">X</button>
+        <img src="${bannerUrl}${banner}" style="display: block; width: 80%; margin: 0 auto;">
+        <span style="display: block; text-align: center; font-weight: 500;">${title} - ${price}$</span>
+        <p style="overflow-y: scroll; padding: 10px; flex-grow: 1;">${description}</p>
+        <button style="display: block; width: calc(100% - 20px); margin: 10px auto; border-radius: 2px; padding: 5px; font-size: 16px;" onclick="">Add To Cart</button>
+        `;
+
+        goodsInfo.innerHTML = html;
+    }
+
+    function closeGoodsInfo() {
+        goodsInfo.style.display = 'none';
+        document.body.style.overflow = 'visible';
+    }
+</script>
+{% endblock scripts %}
